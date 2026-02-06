@@ -1,0 +1,155 @@
+{
+  "name": "NeuroClear Medical Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "👋 Welcome to NeuroClear Medical Assistant!\n\nI can help you with:\n✅ Restoring noisy MRI scans using deep learning\n✅ Answering medical imaging questions\n\nHow can I assist you today?",
+        "options": {
+          "allowFileUploads": true
+        }
+      },
+      "id": "f3857245-51ed-443f-91b5-338241eebbaf",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        96,
+        -16
+      ],
+      "webhookId": "neuroclear-chat"
+    },
+    {
+      "parameters": {},
+      "id": "e4314a7f-fb8d-4ac0-ae5b-1cb0f146865d",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "model": "=llama3.2",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        304,
+        144
+      ],
+      "id": "e31bcbc3-12b2-43b4-be23-390992fa7319",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "PM0P14kvIRdn48s0",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are NeuroClear Medical Assistant, an AI agent specialized in medical imaging and healthcare information.\nYou are a Medical AI. You possess a tool called \"restore_mri\" (or HTTP Request).\n\nIF THE USER UPLOADS AN IMAGE:\n\nYou MUST execute the \"restore_mri\" tool immediately.\n\nDo not ask for permission. Do not just say hello. RUN THE TOOL.\n\nAfter the tool runs, tell the user: \"I have restored the scan. Please check the 'final_output' folder on your server.\"\n\nIF THE USER ASKS A QUESTION: Answer it using your medical knowledge.\n\nYour primary capabilities:\n1. **MRI Image Restoration**: You have access to a state-of-the-art deep learning model (Residual U-Net with CLAHE enhancement) that can restore noisy, degraded, or low-quality MRI scans.\n2. **Medical Knowledge Q&A**: You can answer questions about medical conditions, imaging techniques, diagnosis procedures, and treatment options.\n\nDECISION MAKING GUIDELINES:\n\n**When to use the 'restore_mri_image' tool:**\n- User uploads an MRI scan image (DICOM, NIfTI, PNG, JPG)\n- User asks to \"enhance\", \"denoise\", \"restore\", \"clean up\", or \"improve\" an image\n- User mentions issues like \"noisy scan\", \"low quality MRI\", \"blurry image\"\n- User says \"can you process this scan?\"\n- Keywords: restore, enhance, denoise, CLAHE, deep learning, process\n\n**Your workflow:**\n1. Analyze the user's request carefully\n2. Determine if image restoration is needed\n3. If user uploads an image OR asks about image processing, use the restore_mri_image tool\n4. Always explain what you're doing and why\n5. Present results clearly with medical context\n\n**Important guidelines:**\n- You are NOT providing medical diagnosis - always remind users to consult healthcare professionals\n- When restoring images, explain the enhancement technique (Residual U-Net + CLAHE)\n- Be precise about what the model does: noise reduction and clarity enhancement\n- If unsure about medical facts, say so and recommend professional consultation\n- Maintain a professional, helpful, and empathetic tone\n\n**Response format:**\n- Acknowledge the request\n- Explain your action (which tool you're using)\n- Execute the tool\n- Present results with context\n- Offer follow-up assistance\n\nRemember: Your role is to be a helpful assistant that bridges AI technology with medical imaging expertise, always prioritizing user safety and accuracy.",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "8ad2ad4c-3085-413b-b547-ffe52efac1ac",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        464,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:5000/restore",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "image",
+              "inputDataFieldName": "data0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        384,
+        -288
+      ],
+      "id": "591449e3-e64b-499a-ab58-74a7bcf157f8",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "b9ab71c9-e038-4283-a869-a0b4abe2d631",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e4e71b5448b2fd9af7128bf0a3fcd9168e4516c8a222818882fa4cf96936800d"
+  },
+  "id": "--0mIy4B7eVvVVSZEsRjr",
+  "tags": []
+}
